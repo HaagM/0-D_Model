@@ -1,14 +1,14 @@
 clear;
 clc;
 
-global T_ini p0 P_in dH r d_dc l_dc Zeta_dc T_dc p_dc d_ris l_ris Zeta_ris p_ris g
+global T_ini p0 P_in H r d_dc l_dc Zeta_dc T_dc p_dc d_ris l_ris Zeta_ris g 
 
 %% input
 %
-T_ini = 40;
+T_ini = 20;
 p0 = 1;
-P_in = 80;
-dH = 7.348;
+P_in = 300;
+H = 7.348;
 r = 4e-5; % Wand Rauigkeit
 % downcomer
 d_dc = 41.8e-3;
@@ -18,7 +18,7 @@ T_dc = T_ini;
 p_dc = p0;
 % riser
 d_ris = 53e-3;
-l_ris = 7.375;
+l_ris = H;
 Zeta_ris = 1.5;
 
 %% Konstanten
@@ -29,22 +29,22 @@ Sum_dp_eq = @press_eq;
 %% Path
 path(path, 'Druckverlust');
 
-%% Stoffwerte
-v_dc = XSteam('v_pT',p_dc,T_dc);
-h_dc = XSteam('h_pT',p_dc,T_dc);
-
-interv = 0.02;
+m_max = 2;
+interv = 0.04;
 n_sol = 0;
-Sum_dp = zeros(1,2);
-for m = 0 : interv : 2 %Sucht in welchen Interval sich eine 0-Stelle befindet für Sum_dp 
-    Sum_dp = [Sum_dp_eq(m) Sum_dp];
-    Sum_dp(3) = [];
+Sum_dp = zeros(m_max / interv + 1 , 4);
+M = zeros(m_max / interv + 1 , 1);
+counter = 0;
+for m = 0 : interv : m_max %Sucht in welchen Interval sich eine 0-Stelle befindet für Sum_dp 
+    counter = counter + 1;
+    M(counter) = m; 
+    [Sum_dp(counter,1), Sum_dp(counter,2), Sum_dp(counter,3), Sum_dp(counter,4), Sum_dp(counter,5)] = Sum_dp_eq(m); %Berechnen der Druckbilanz an den Intervallgrenzen
     if m == 0
         continue
     end
-    if (Sum_dp(1) * Sum_dp(2)) > 0 || isnan(Sum_dp(1)) || isnan(Sum_dp(2)) %Prüft ob sich das Vorzeichen über ein Interval ändert
+    if (Sum_dp(counter , 1) * Sum_dp(counter - 1 , 1)) > 0 || isnan(Sum_dp(counter - 1 , 1)) || isnan(Sum_dp(counter , 1)) %Prüft ob sich das Vorzeichen über ein Interval ändert
         continue
-    elseif Sum_dp(:) == 0;
+    elseif Sum_dp(counter , 1) == 0;
         n_sol = n_sol +1;
         m_sol(n_sol) = m;
     else  
@@ -52,5 +52,7 @@ for m = 0 : interv : 2 %Sucht in welchen Interval sich eine 0-Stelle befindet fü
         m_sol(n_sol) = fzero(Sum_dp_eq,[m-interv m]); % 0-Stellensuche für Druckgleichgewicht im durchsuchten Interval
     end
 end
-        
-
+ 
+plot(M,Sum_dp(:,1)*1e-5 , M,Sum_dp(:,2)*1e-5 , M,Sum_dp(:,3)*1e-5 , M,Sum_dp(:,4)*1e-5 , M,Sum_dp(:,5)/10)
+legend('Sum dp','dp acc','dp fric','dp fric ris','HVF')
+grid on
